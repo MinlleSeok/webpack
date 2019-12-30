@@ -24,3 +24,9 @@ import "./style.css";
 // document.write(sum(1, 2));
 console.log(math.sum(1, 2));
 
+console.log(process.env.NODE_ENV);
+console.log(CONSTANT_VALUE);
+console.log(VERSION);
+console.log(PRODUCTION);
+console.log(MAX_COUNT);
+console.log(API.DOMAIN);

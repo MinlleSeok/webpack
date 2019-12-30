@@ -1,7 +1,12 @@
 
 # Understands Frontend Development Environment: Webpack
 
-[Reference] : <http://jeonghwan-kim.github.io/series/2019/12/10/frontend-dev-env-webpack-basic.html>
+***Reference***
+
+<http://jeonghwan-kim.github.io/series/2019/12/10/frontend-dev-env-webpack-basic.html>
+<https://webpack.js.org/>
+
+***INDEX***
 
 - [Understands Frontend Development Environment: Webpack](#understands-frontend-development-environment-webpack)
   - [1. Background](#1-background)
@@ -23,6 +28,11 @@
     - [6.1 Plugin Role](#61-plugin-role)
   - [7. Useful Plugin](#7-useful-plugin)
     - [7.1 BannerPlugin](#71-bannerplugin)
+    - [7.2 DefinePlugin](#72-defineplugin)
+    - [7.3 Html Template Plugin](#73-html-template-plugin)
+    - [7.4 Clean Webpack Plugin](#74-clean-webpack-plugin)
+    - [7.5 Mini Css Extract Plugin](#75-mini-css-extract-plugin)
+  - [8. Node Express](#8-node-express)
 
 ## 1. Background
 
@@ -407,3 +417,228 @@ module.exports = {
 ## 7. Useful Plugin
 
 ### 7.1 BannerPlugin
+
+:: banner.js
+
+```js
+const childProcess = require("child_process");
+
+module.exports = function banner() {
+    const commit = childProcess.execSync("git rev-parse --short HEAD");
+    const user = childProcess.execSync("git config user.name");
+    const date = new Date().toLocaleString();
+
+    return (
+        `Commit Version: ${commit}` +
+        `Build Date: ${date}\n` +
+        `Author: ${user}`
+    );
+}
+```
+
+:: webpack.config.js
+
+```js
+const webpack = require("webpack");
+const banner = require("./banner.js");
+
+module.exports = {
+    plugins: [
+        // new CustomPlugin(),
+        new webpack.BannerPlugin(
+        // {
+            // banner: () => `Build Date Function: ${new Date().toLocaleString()}`
+            // banner: `Build Date String: ${new Date().toLocaleString()}`
+        // }
+            banner
+        )
+    ]
+}
+```
+
+### 7.2 DefinePlugin
+
+- separates Development and Operation Environments
+
+:: webpack.config.js
+
+```js
+const webpack = require("webpack");
+process.env.NODE_ENV = process.env.NODE_ENV || "development";
+
+module.exports = {
+    plugins: [
+        new webpack.DefinePlugin({
+            CONSTANT_VALUE: "1+1",
+            VERSION: JSON.stringify("v.1.0.1"),
+            PRODUCTION: JSON.stringify(false),
+            MAX_COUNT: JSON.stringify(999),
+            "API.DOMAIN": JSON.stringify("http://google.com")
+    })
+    ]
+}
+```
+
+:: app.js
+
+```js
+console.log(process.env.NODE_ENV);
+console.log(CONSTANT_VALUE);
+console.log(VERSION);
+console.log(PRODUCTION);
+console.log(MAX_COUNT);
+console.log(API.DOMAIN);
+```
+
+### 7.3 Html Template Plugin
+
+- handles html template file
+
+```bash
+% npm i html-webpack-plugin
+```
+
+:: build/index.html => src/index.html
+
+```html
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>title <%= env %></title>
+    </head>
+    <body>
+        <!-- remove loading script -->
+        <!-- <script type="module" src="./main.js"></script> -->
+    </body>
+</html>
+```
+
+:: webpack.config.js
+
+```js
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+
+module.exports = {
+    plugins: [
+        new HtmlWebpackPlugin({
+            hash: true, // adds webpack hash value into query string
+            minify: process.env.NODE_ENV === "production" ? {
+                collapseWhitespace: true, // removes white-space
+                removeComments: true  // removes comments
+            } : false,
+            template: "./src/index.html", // HTML template path
+            templateParameters: { // injects Parameter
+                env: process.env.NODE_ENV === "development" ? "(developing...)" : ""
+            }  
+        })
+    ]
+}
+```
+
+:: package.json
+
+```json
+{
+    "scripts": {
+        "pro": "NODE_ENV=production npm run build"
+    }
+}
+```
+
+### 7.4 Clean Webpack Plugin
+
+- After building, cleans up unused files.
+
+```bash
+% npm i clean-webpack-plugin
+```
+
+:: webpack.config.js
+
+```js
+const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+
+module.exports = {
+    plugins: [
+        new CleanWebpackPlugin()
+    ]
+}
+```
+
+### 7.5 Mini Css Extract Plugin
+
+- makes css file
+
+```bash
+% npm i mini-css-extract-plugin
+```
+
+:: webpack.config.js
+
+```js
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+
+module.exports = {
+    module: {
+        rules: [
+            ...,
+            {
+                // Object has test, use
+                test: /\.css$/, // .css suffix files
+                use: [ process.env.NODE_ENV === "production"
+                ? MiniCssExtractPlugin.loader // production
+                : "style-loader", "css-loader" ] // uses "css-loader" and "style-loader"
+            }
+        ]
+    },
+    ...,
+    plugins: [
+        ...,
+        process.env.NODE_ENV === "production"
+        ? new MiniCssExtractPlugin({ filename: `[name].css` })
+        : false
+    ].filter(Boolean)
+};
+```
+
+## 8. Node Express
+
+```bash
+% npm i express
+```
+
+:: server.js
+
+```js
+const express = require("express");
+const app = express()
+const port = 3000
+
+app.use("/", express.static(__dirname + '/build'));
+
+app.listen(port, () => console.log(`listening on port ${port}`));
+```
+
+:: package.json
+
+```js
+{
+    "scripts": {
+        "build": "./node_modules/.bin/webpack",
+        "build:pro": "NODE_ENV=production npm run build",
+        "serve": "node server.js",
+        "dev": "npm run build && webpack-dev-server",
+        "pro": "npm run build:pro && npm run serve"
+    }
+}
+```
+
+***Happy Working***
+
+```bash
+% npm run pro
+```
+
+---
+
+$$ Bundle your Assets! $$
